@@ -3,7 +3,10 @@
 
 #include "ShooterCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 
 // Sets default values
 AShooterCharacter::AShooterCharacter(): BaseTurnRate(45.f), BaseLookUpRate(45.f)
@@ -14,12 +17,22 @@ AShooterCharacter::AShooterCharacter(): BaseTurnRate(45.f), BaseLookUpRate(45.f)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>("CameraBoom");
 	CameraBoom->TargetArmLength = 300.f;
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->bUsePawnControlRotation = true;
+	CameraBoom->bUsePawnControlRotation = true; // 相机手臂跟随Controller选择
 	
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>("CameraComp");
-	FollowCamera->SetupAttachment(CameraBoom);
-	FollowCamera->bUsePawnControlRotation = false;
-	
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // USpringComponent的end节点
+	FollowCamera->bUsePawnControlRotation = false; // 相机不跟随Controller旋转
+
+	// character不要跟随controller选择，Controller只会影响CameraBoom
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	bUseControllerRotationYaw = false;
+
+	// Configure Character Movement
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+	GetCharacterMovement()->JumpZVelocity = 600.f;
+	GetCharacterMovement()->AirControl = 0.2f;
 }
 
 // Called when the game starts or when spawned
@@ -46,11 +59,12 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterCharacter::LookUpAtRate);
 	PlayerInputComponent->BindAxis("TurnRate", this, &AShooterCharacter::TurnAtRate);
 	
-	PlayerInputComponent->BindAxis("LookUp", this, &AShooterCharacter::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("Turn", this, &AShooterCharacter::AddControllerYawInput);
+	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AShooterCharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &AShooterCharacter::StopJumping);
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AShooterCharacter::FireWeapon);
 }
 
 
@@ -77,13 +91,18 @@ void AShooterCharacter::MoveRight(float Value) {
 
 
 void AShooterCharacter::LookUpAtRate(float Rate) {
-	
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
 
 void AShooterCharacter::TurnAtRate(float Rate) {
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AShooterCharacter::FireWeapon() {
+	if (FireSound) {
+		UGameplayStatics::PlaySound2D(this, FireSound);
+	}
 }
 
 

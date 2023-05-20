@@ -30,6 +30,8 @@ protected:
 
 	UFUNCTION()
 	void TurnAtRate(float Rate);
+
+	void FireWeapon();
 	
 
 
@@ -47,7 +49,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Rate", meta=(AllowPrivateAccess="true"))
 	float BaseLookUpRate;
 
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat", meta=(AllowPrivateAccess="true"))
+	class USoundCue* FireSound;
 
 public:
 
